@@ -15,12 +15,17 @@
     li { padding: 8px 0; border-top: 1px solid #334155; }
     small { display: block; color: #bac8d9; margin-top: 4px; }
     p { margin: 12px 16px; color: #bac8d9; font-size: 11px; }
-  </style><details open><summary>PR Guard</summary><ul aria-live="polite"></ul><p>Configure pelo ícone da extensão. Alertas locais; verifique também os checks do GitHub.</p></details>`;
+  </style><details open><summary>PR Guard</summary><ul aria-live="polite"></ul><p>PR Guard <span id="pr-guard-version"></span> · Configure pelo ícone da extensão. Alertas locais; verifique também os checks do GitHub.</p></details>`;
+  shadow.querySelector('#pr-guard-version').textContent = chrome.runtime.getManifest().version;
   const list = shadow.querySelector('ul');
   const summary = shadow.querySelector('summary');
   const visible = node => node.getClientRects().length > 0;
-  function branch(selector) {
-    const node = document.querySelector(selector);
+  function branch(selector, index) {
+    // The React header renders base then head as BranchName components.
+    // Keep the query inside the PR header: timeline events also contain refs.
+    const header = document.querySelector('header[data-component="SplitPageLayout.Header"]');
+    const refs = header?.querySelectorAll('[data-component="PageHeader.Description"] [data-component="BranchName"]');
+    const node = header ? (refs.length === 2 ? refs[index] : null) : document.querySelector(selector);
     if (!node) return undefined;
     const raw = node.getAttribute('title') || node.textContent.trim();
     return raw.replace(/^[^:]+:/, '').trim();
@@ -28,7 +33,7 @@
   function bodyMarkdown() {
     const edit = [...document.querySelectorAll('textarea[name="pull_request[body]"], textarea[name="issue[body]"]')].find(visible);
     if (edit) return edit.value;
-    const body = document.querySelector('.js-issue-body .comment-body, .js-issue-body .markdown-body, [data-testid="issue-body"] .markdown-body');
+    const body = document.querySelector('.js-issue-body .comment-body, .js-issue-body .markdown-body, [data-testid="issue-body"] .markdown-body, .js-command-palette-pull-body .markdown-body');
     if (!body) return undefined;
     const clone = body.cloneNode(true);
     clone.querySelectorAll('pre').forEach(node => node.remove());
@@ -45,8 +50,8 @@
     const route = location.pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/|$)/);
     if (!route) return null;
     const titleEdit = document.querySelector('input[name="issue[title]"], input[name="pull_request[title]"]');
-    const title = titleEdit && visible(titleEdit) ? titleEdit.value : document.querySelector('.js-issue-title, [data-testid="issue-title"]')?.textContent.trim();
-    return { channel: 'browser', repository: `${route[1]}/${route[2]}`, title, body: bodyMarkdown(), head: branch('.head-ref'), base: branch('.base-ref'), mergeMethod: methodFromButton(clicked) || selectedMergeMethod(document.querySelectorAll('button')) };
+    const title = titleEdit && visible(titleEdit) ? titleEdit.value : document.querySelector('.js-issue-title, [data-testid="issue-title"], header[data-component="SplitPageLayout.Header"] h1 .markdown-title')?.textContent.trim();
+    return { channel: 'browser', repository: `${route[1]}/${route[2]}`, title, body: bodyMarkdown(), head: branch('.head-ref', 1), base: branch('.base-ref', 0), mergeMethod: methodFromButton(clicked) || selectedMergeMethod(document.querySelectorAll('button')) };
   }
   function render(clicked) {
     const ctx = context(clicked);

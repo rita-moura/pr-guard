@@ -6,6 +6,7 @@ exija Squash. O PR desta correção pode ser usado no teste.
 1. Execute `npm test` e `npm run build` nesta branch.
 2. Em `chrome://extensions`, recarregue o PR Guard. Se ainda não estiver instalado,
    carregue `/home/rita/LumeraCode/pr-guard/dist/extension` sem compactação.
+   Recarregue também a página do PR e confirme **PR Guard 0.1.1** no rodapé do painel.
 3. Nas opções da extensão, importe `policy.example.json` se precisar restaurar a
    política de exemplo. Isso substitui a configuração local: exporte antes se quiser preservá-la.
 4. Abra ou recarregue a página do PR e vá até os controles de merge.
@@ -27,3 +28,11 @@ nas configurações do repositório não estarão disponíveis para seleção.
 O detector cobre rótulos em inglês e atributos dos controles. Auto-merge, merge queue
 e outras variações do layout ainda precisam de validação específica. Os testes
 unitários usam propriedades simuladas dos controles; o teste no GitHub continua necessário.
+
+## Verificação automatizada no Chrome
+
+Depois de `npm run build`, execute `npm run test:browser`. Requer Chrome instalado
+(`google-chrome` no PATH, ou `CHROME_BIN` apontando para o executável). O teste usa
+um perfil temporário e páginas locais com fixtures dos layouts antigo e React,
+incluindo atualização do título, checklist e método, branches de fork e dados ausentes.
+Não acessa sua sessão do GitHub.
