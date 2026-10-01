@@ -28,6 +28,9 @@ npm run build
 5. Clique no ícone da extensão para editar as regras.
 
 Depois de alterar o código: rode o build, recarregue a extensão e a página do PR.
+Para validar a seleção de merge, siga o [roteiro de teste manual](docs/TESTE-MANUAL.md).
+O painel distingue pendências de verificações não realizadas; controles de merge
+ambíguos ou ausentes não são tratados como aprovação.
 A extensão não precisa de token, não envia dados para serviços externos e armazena
 a configuração somente no navegador, com `chrome.storage.local`.
 

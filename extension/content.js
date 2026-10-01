@@ -1,5 +1,6 @@
-/* global PRGuard, chrome */
+/* global PRGuard, PRGuardGitHub, chrome */
 (() => {
+  const { methodFromButton, selectedMergeMethod } = PRGuardGitHub;
   let policy = PRGuard.defaults;
   let lastRender = '';
   let timer;
@@ -12,6 +13,7 @@
     summary { cursor: pointer; padding: 12px 16px; font-weight: 700; color: #80dfc3; }
     ul { list-style: none; margin: 0; padding: 0 16px; max-height: 45vh; overflow: auto; }
     li { padding: 8px 0; border-top: 1px solid #334155; }
+    small { display: block; color: #bac8d9; margin-top: 4px; }
     p { margin: 12px 16px; color: #bac8d9; font-size: 11px; }
   </style><details open><summary>PR Guard</summary><ul aria-live="polite"></ul><p>Configure pelo ícone da extensão. Alertas locais; verifique também os checks do GitHub.</p></details>`;
   const list = shadow.querySelector('ul');
@@ -22,16 +24,6 @@
     if (!node) return undefined;
     const raw = node.getAttribute('title') || node.textContent.trim();
     return raw.replace(/^[^:]+:/, '').trim();
-  }
-  function methodFromButton(button) {
-    if (!button) return undefined;
-    const value = button.getAttribute('data-merge-method') || button.value;
-    if (['squash', 'merge', 'rebase'].includes(value)) return value;
-    const text = button.textContent.trim().toLowerCase();
-    if (/squash and merge|confirm squash/.test(text)) return 'squash';
-    if (/rebase and merge|confirm rebase/.test(text)) return 'rebase';
-    if (/create a merge commit|confirm merge/.test(text)) return 'merge';
-    return undefined;
   }
   function bodyMarkdown() {
     const edit = [...document.querySelectorAll('textarea[name="pull_request[body]"], textarea[name="issue[body]"]')].find(visible);
@@ -54,8 +46,7 @@
     if (!route) return null;
     const titleEdit = document.querySelector('input[name="issue[title]"], input[name="pull_request[title]"]');
     const title = titleEdit && visible(titleEdit) ? titleEdit.value : document.querySelector('.js-issue-title, [data-testid="issue-title"]')?.textContent.trim();
-    const button = [...document.querySelectorAll('button')].find(node => visible(node) && methodFromButton(node));
-    return { channel: 'browser', repository: `${route[1]}/${route[2]}`, title, body: bodyMarkdown(), head: branch('.head-ref'), base: branch('.base-ref'), mergeMethod: methodFromButton(clicked) || methodFromButton(button) };
+    return { channel: 'browser', repository: `${route[1]}/${route[2]}`, title, body: bodyMarkdown(), head: branch('.head-ref'), base: branch('.base-ref'), mergeMethod: methodFromButton(clicked) || selectedMergeMethod(document.querySelectorAll('button')) };
   }
   function render(clicked) {
     const ctx = context(clicked);
@@ -72,17 +63,23 @@
         const item = document.createElement('li');
         const icon = { pass: '✅', fail: result.severity === 'warning' ? '⚠️' : '❌', unknown: '⏳' }[result.status];
         item.textContent = `${icon} ${result.id}: ${result.status === 'pass' ? 'Verificação aprovada.' : result.message || result.detail}`;
-        if (result.message !== result.detail) item.title = result.detail;
+        if (result.status !== 'pass' && result.message && result.detail && result.message !== result.detail) {
+          const detail = document.createElement('small');
+          detail.textContent = result.detail;
+          item.append(detail);
+        }
         list.append(item);
       }
-      summary.textContent = `PR Guard · ${results.filter(r => r.status === 'fail').length} pendência(s)`;
+      const failed = results.filter(r => r.status === 'fail').length;
+      const unknown = results.filter(r => r.status === 'unknown').length;
+      summary.textContent = `PR Guard · ${failed} pendência(s)${unknown ? ` · ${unknown} não verificada(s)` : ''}`;
     }
     return results;
   }
   const schedule = () => { clearTimeout(timer); timer = setTimeout(() => render(), 250); };
   chrome.storage.local.get('policy').then(data => { policy = data.policy ?? PRGuard.defaults; render(); });
   chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes.policy) { policy = changes.policy.newValue ?? PRGuard.defaults; render(); } });
-  new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'aria-expanded'] });
+  new MutationObserver(schedule).observe(document.documentElement, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'aria-expanded', 'aria-label', 'data-merge-method', 'value'] });
   document.addEventListener('input', schedule);
   document.addEventListener('turbo:load', schedule);
   window.addEventListener('popstate', schedule);
