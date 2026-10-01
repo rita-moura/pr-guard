@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "rules": [
+    { "id": "titulo", "type": "title-prefix", "prefixes": ["feat:", "fix:", "docs:", "chore:", "test:", "refactor:"], "severity": "error" },
+    { "id": "descricao", "type": "body-sections", "sections": ["Objetivo", "Alterações", "Como testar"], "severity": "error" },
+    { "id": "checklist", "type": "checklist", "severity": "warning" },
+    { "id": "squash", "type": "merge-method", "when": { "head": ["feature/*", "fix/*"] }, "method": "squash", "severity": "error" },
+    { "id": "openspec", "type": "openspec-archived", "enabled": false, "severity": "error" }
+  ]
+}

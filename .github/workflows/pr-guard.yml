@@ -1,0 +1,26 @@
+name: PR Guard
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: pr-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  policy:
+    name: PR Guard policy
+    runs-on: ubuntu-latest
+    steps:
+      # Run only trusted base code/policy. Never check out or execute PR head code.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: node scripts/check-pr.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

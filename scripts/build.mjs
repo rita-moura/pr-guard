@@ -1,0 +1,11 @@
+import { mkdir, readFile, writeFile, cp, rm } from 'node:fs/promises';
+import { validatePolicy } from '../src/engine.js';
+const root = new URL('../', import.meta.url);
+const output = new URL('dist/extension/', root);
+await rm(output, { recursive: true, force: true });
+await mkdir(output, { recursive: true });
+await cp(new URL('extension/', root), output, { recursive: true });
+const engine = (await readFile(new URL('src/engine.js', root), 'utf8')).replace(/^export /gm, '');
+const policy = validatePolicy(JSON.parse(await readFile(new URL('policy.example.json', root), 'utf8')));
+await writeFile(new URL('engine.js', output), `(() => {\n${engine}\nglobalThis.PRGuard = { evaluate, validatePolicy, hasFailures, defaults: ${JSON.stringify(policy)} };\n})();\n`);
+console.log('Extensão pronta em dist/extension');
