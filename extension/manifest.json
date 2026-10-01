@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "PR Guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Alertas configuráveis de padrão de PR, merge e OpenSpec no GitHub.",
   "permissions": ["storage"],
   "action": { "default_title": "Configurar PR Guard", "default_popup": "options.html" },
   "options_page": "options.html",
-  "content_scripts": [{ "matches": ["https://github.com/*"], "js": ["engine.js", "content.js"], "run_at": "document_idle" }]
+  "content_scripts": [{ "matches": ["https://github.com/*"], "js": ["engine.js", "github-merge.js", "content.js"], "run_at": "document_idle" }]
 }

@@ -1,12 +1,13 @@
 {
   "name": "pr-guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Regras configuráveis para pull requests e merge no GitHub",
   "engines": { "node": ">=20" },
   "scripts": {
     "test": "node --test",
+    "test:browser": "node scripts/browser-smoke.mjs",
     "build": "node scripts/build.mjs",
     "check:pr": "node scripts/check-pr.mjs"
   }
