@@ -29,10 +29,10 @@ export function validatePolicy(policy) {
   return policy;
 }
 
-export function globMatches(pattern, value) {
+export function globMatches(pattern, value, ignoreCase = false) {
   // Only '*' is special. All regular-expression characters are escaped.
   const escaped = pattern.split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
-  return new RegExp(`^${escaped}$`).test(value);
+  return new RegExp(`^${escaped}$`, ignoreCase ? 'i' : '').test(value);
 }
 
 export function cleanMarkdown(body = '') {
@@ -62,7 +62,7 @@ export function evaluate(policy, context) {
     const result = (status, detail) => ({ id: rule.id, type: rule.type, severity: rule.severity ?? 'error', status, message: rule.message || detail, detail });
     for (const [key, patterns] of Object.entries(rule.when ?? {})) {
       if (context[key] == null) return result('unknown', `Não foi possível identificar ${key}.`);
-      if (!patterns.some(pattern => globMatches(pattern, context[key]))) return result('skip', 'Regra fora do escopo deste PR.');
+      if (!patterns.some(pattern => globMatches(pattern, context[key], key === 'head' || key === 'base'))) return result('skip', `Regra fora do escopo: ${key} = ${JSON.stringify(context[key])}; esperado: ${patterns.map(pattern => JSON.stringify(pattern)).join(' ou ')}.`);
     }
     if (rule.type === 'title-prefix') {
       if (context.title == null) return result('unknown', 'Título indisponível.');

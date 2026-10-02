@@ -18,6 +18,7 @@
     li[data-status="error"] { background: #3d1218; border-left-color: #f85149; }
     li[data-status="warning"] { background: #3a2a0a; border-left-color: #d29922; }
     li[data-status="unknown"] { border-left-color: #8b949e; }
+    li[data-status="skip"] { color: #bac8d9; border-left-color: #8b949e; }
     li svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
     li[data-status="error"] strong { color: #ffa198; }
     li[data-status="warning"] strong { color: #f2cc60; }
@@ -26,12 +27,13 @@
     summary[data-state="unknown"] { color: #c9d1d9; }
     small { display: block; color: #bac8d9; margin-top: 4px; }
     p { margin: 12px 16px; color: #bac8d9; font-size: 11px; }
-  </style><details open><summary>PR Guard</summary><ul aria-live="polite"></ul><p id="empty-state" hidden>Nenhuma regra configurada. Adicione ou importe suas regras pelo ícone da extensão.</p><p>PR Guard <span id="pr-guard-version"></span> · Configure pelo ícone da extensão. Alertas locais; verifique também os checks do GitHub.</p></details>`;
+  </style><details open><summary>PR Guard</summary><ul aria-live="polite"></ul><p id="empty-state" hidden></p><p id="scope-context" hidden></p><p>PR Guard <span id="pr-guard-version"></span> · Configure pelo ícone da extensão. Alertas locais; verifique também os checks do GitHub.</p></details>`;
   shadow.querySelector('#pr-guard-version').textContent = chrome.runtime.getManifest().version;
   const list = shadow.querySelector('ul');
   const summary = shadow.querySelector('summary');
   // SVG instead of emoji: emoji fall back to plain glyphs (e.g. "×") on some systems.
   const icons = {
+    skip: ['Fora do escopo', '<circle cx="9" cy="9" r="8" fill="none" stroke="#8b949e" stroke-width="2"/><path d="M5 9h8" stroke="#8b949e" stroke-width="2"/>'],
     pass: ['Aprovado', '<circle cx="9" cy="9" r="9" fill="#2ea043"/><path d="M5 9.3l2.6 2.6L13 6.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'],
     error: ['Erro', '<circle cx="9" cy="9" r="9" fill="#da3633"/><path d="M6 6l6 6M12 6l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'],
     warning: ['Aviso', '<path d="M9 1.2L17.4 16H.6z" fill="#d29922" stroke="#d29922" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 6.5v4.2" stroke="#1c1300" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="13.3" r="1.1" fill="#1c1300"/>'],
@@ -84,23 +86,35 @@
     const ctx = context(clicked);
     if (!host.isConnected) document.documentElement.append(host);
     let results;
-    try { results = PRGuard.evaluate(policy, ctx).filter(result => result.status !== 'skip'); }
+    try { results = PRGuard.evaluate(policy, ctx); }
     catch (error) { results = [{ status: 'fail', severity: 'error', id: 'configuração', detail: error.message }]; }
     const unconfigured = Array.isArray(policy?.rules) && policy.rules.length === 0;
-    const signature = JSON.stringify({ results, unconfigured });
+    const skipped = results.filter(result => result.status === 'skip').length;
+    const inactive = !unconfigured && results.length === 0;
+    const outOfScope = skipped > 0 && skipped === results.length;
+    const scopeContext = outOfScope ? `PR: ${ctx.repository} · origem: ${ctx.head ?? 'não identificada'} → destino: ${ctx.base ?? 'não identificado'}.` : '';
+    const signature = JSON.stringify({ results, unconfigured, scopeContext });
     if (signature !== lastRender) {
       lastRender = signature;
       list.replaceChildren();
-      shadow.querySelector('#empty-state').hidden = !unconfigured;
-      for (const result of results) {
+      const emptyState = shadow.querySelector('#empty-state');
+      emptyState.hidden = !(unconfigured || inactive || outOfScope);
+      emptyState.textContent = unconfigured
+        ? 'Nenhuma regra configurada. Adicione ou importe suas regras pelo ícone da extensão.'
+        : inactive ? 'Todas as regras estão desativadas. Ative as regras pelo ícone da extensão.'
+          : 'Nenhuma regra se aplica a este PR. Confira os filtros de repositório e branches nas regras salvas.';
+      const scopeInfo = shadow.querySelector('#scope-context');
+      scopeInfo.hidden = !outOfScope;
+      scopeInfo.textContent = scopeContext;
+      for (const result of results.filter(result => outOfScope || result.status !== 'skip')) {
         const item = document.createElement('li');
         const status = statusOf(result);
         item.dataset.status = status;
         const [label, svg] = icons[status];
         item.innerHTML = `<svg viewBox="0 0 18 18" role="img" aria-label="${label}">${svg}</svg><div><strong></strong> <span></span></div>`;
         item.querySelector('strong').textContent = `${result.id}:`;
-        item.querySelector('span').textContent = result.status === 'pass' ? 'Verificação aprovada.' : result.message || result.detail;
-        if (result.status !== 'pass' && result.message && result.detail && result.message !== result.detail) {
+        item.querySelector('span').textContent = result.status === 'pass' ? 'Verificação aprovada.' : result.status === 'skip' ? result.detail : result.message || result.detail;
+        if (!['pass', 'skip'].includes(result.status) && result.message && result.detail && result.message !== result.detail) {
           const detail = document.createElement('small');
           detail.textContent = result.detail;
           item.lastElementChild.append(detail);
@@ -109,9 +123,13 @@
       }
       const failed = results.filter(r => r.status === 'fail').length;
       const unknown = results.filter(r => r.status === 'unknown').length;
-      summary.textContent = unconfigured ? 'PR Guard · sem regras' : `PR Guard · ${failed} pendência(s)${unknown ? ` · ${unknown} não verificada(s)` : ''}`;
+      const passed = results.filter(r => r.status === 'pass').length;
+      summary.textContent = unconfigured ? 'PR Guard · sem regras'
+        : inactive ? 'PR Guard · regras desativadas'
+          : outOfScope ? 'PR Guard · nenhuma regra aplicável'
+            : `PR Guard · ${failed} pendência(s) · ${passed} aprovada(s)${unknown ? ` · ${unknown} não verificada(s)` : ''}`;
       const states = results.map(statusOf);
-      summary.dataset.state = unconfigured ? 'unknown' : ['error', 'unknown', 'warning'].find(state => states.includes(state)) ?? 'pass';
+      summary.dataset.state = unconfigured || inactive || outOfScope ? 'unknown' : ['error', 'unknown', 'warning'].find(state => states.includes(state)) ?? 'pass';
     }
     // Reapplied on every render: GitHub may re-render the merge box.
     guardMerge(results);

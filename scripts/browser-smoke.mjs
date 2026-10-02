@@ -10,7 +10,7 @@ const examplePolicy = JSON.parse(await readFile(new URL('policy.example.json', r
 const manifest = JSON.parse(await readFile(new URL('dist/extension/manifest.json', root), 'utf8'));
 const scripts = new Map(await Promise.all(manifest.content_scripts[0].js.map(async name =>
   [`/${name}`, await readFile(new URL(`dist/extension/${name}`, root), 'utf8')])));
-const storedPolicy = {...examplePolicy, blockMerge: true, rules: examplePolicy.rules.map(rule => rule.id === 'squash' ? {...rule, when: {...rule.when, base: ['main'], repository: ['example/repo']}} : rule)};
+const storedPolicy = {...examplePolicy, blockMerge: true, rules: examplePolicy.rules.map(rule => rule.id === 'squash' ? {...rule, when: {...rule.when, head: ['FEATURE/*', 'FIX/*'], base: ['MAIN'], repository: ['example/repo']}} : rule)};
 const storageMock = `
 if (window.parent !== window) window.chrome = window.parent.chrome;
 else {
@@ -18,7 +18,7 @@ else {
   const data = {policy: ${JSON.stringify(storedPolicy)}};
   if (new URLSearchParams(location.search).get('layout') === 'off') data.enabled = false;
   if (new URLSearchParams(location.search).get('layout') === 'empty') delete data.policy;
-  window.chrome = {runtime: {getManifest: () => ({version: '${manifest.version}'})}, storage: {
+  window.chrome = {extension: {getViews: () => []}, runtime: {getManifest: () => ({version: '${manifest.version}'})}, storage: {
     local: {get: async () => ({...data}), set: async values => {
       const changes = Object.fromEntries(Object.entries(values).map(([key, newValue]) => [key, {oldValue: data[key], newValue}]));
       Object.assign(data, values);
@@ -70,6 +70,59 @@ const expect = (condition, message) => { if (!condition) throw Error(message); }
   expect(items().length === 4 && items().every(node => node.dataset.status === 'pass' && node.querySelector('svg')), 'initial rules must pass');
   expect(!document.querySelector('#merge-action').dataset.prGuardBlocked, 'passing rules must keep merge enabled');
   expect(panel().querySelector('#pr-guard-version').textContent === '${manifest.version}', 'version must be visible');
+  expect(panel().querySelector('summary').textContent.includes('4 aprovada(s)'), 'passing summary must count verified rules');
+  const savedPolicy = (await chrome.storage.local.get('policy')).policy;
+  const headRef = document.querySelector('header [data-component="PageHeader.Description"]')?.querySelectorAll('[data-component="BranchName"]')[1] ?? document.querySelector('.head-ref');
+  const originalHead = {text: headRef.textContent, title: headRef.getAttribute('title')};
+  const scopedMergePolicy = {version: 1, blockMerge: true, rules: [
+    {id: 'squash-tarefa', type: 'merge-method', method: 'squash', when: {head: ['PLBUX-*']}},
+    {id: 'merge-commit-sync', type: 'merge-method', method: 'merge', when: {head: ['sync/*', 'sync-*']}}
+  ]};
+  for (const [head, expected, hidden, label] of [
+    ['plbux-9515/data-structure', 'squash-tarefa', 'merge-commit-sync', 'Squash and merge'],
+    ['PLBUX-9515/data-structure', 'squash-tarefa', 'merge-commit-sync', 'Squash and merge'],
+    ['sync/mercury', 'merge-commit-sync', 'squash-tarefa', 'Merge pull request'],
+    ['SYNC-main', 'merge-commit-sync', 'squash-tarefa', 'Merge pull request']
+  ]) {
+    headRef.textContent = head;
+    headRef.setAttribute('title', head);
+    document.querySelector('#merge-action').textContent = label;
+    await chrome.storage.local.set({policy: scopedMergePolicy});
+    await wait();
+    expect(items().length === 1 && state(expected) === 'pass' && !item(hidden), 'branch must only show its matching merge rule: ' + head);
+    expect(panel().querySelector('#scope-context').hidden, 'irrelevant filter diagnostics must stay hidden');
+    expect(!document.querySelector('[data-pr-guard-blocked]'), 'passing scoped method must allow merge');
+  }
+  headRef.textContent = originalHead.text;
+  if (originalHead.title === null) headRef.removeAttribute('title');
+  else headRef.setAttribute('title', originalHead.title);
+  document.querySelector('#merge-action').textContent = 'Squash and merge';
+  await chrome.storage.local.set({policy: savedPolicy});
+  await wait();
+
+  for (const [field, pattern, actual] of [['repository', 'other/*', 'example/repo'], ['head', 'feature/*', 'fix/read-layout'], ['base', 'mercury', 'main']]) {
+    const scoped = {id: 'escopo', type: 'title-prefix', prefixes: ['fix:'], when: {[field]: [pattern]}, message: 'Mensagem de erro personalizada'};
+    await chrome.storage.local.set({policy: {version: 1, blockMerge: true, rules: [scoped]}});
+    await wait();
+    expect(panel().querySelector('summary').textContent.includes('nenhuma regra aplicável'), 'out-of-scope rules must not claim zero pending checks');
+    expect(panel().querySelector('summary').dataset.state === 'unknown', 'out-of-scope summary must be neutral');
+    expect(state('escopo') === 'skip' && row('escopo').includes(field) && row('escopo').includes(pattern) && row('escopo').includes(actual), 'skipped rule must explain the mismatched filter');
+    expect(!row('escopo').includes(scoped.message), 'skip must show scope diagnostic instead of failure instructions');
+    expect(panel().querySelector('#scope-context').textContent.includes('fix/read-layout → destino: main'), 'scope context must show detected branches');
+    expect(!panel().querySelector('#empty-state').hidden, 'out-of-scope state must explain how to fix filters');
+    expect(!document.querySelector('[data-pr-guard-blocked]'), 'out-of-scope rules must not block merge');
+    await chrome.storage.local.set({policy: {version: 1, rules: [scoped, {id: 'aplicavel', type: 'title-prefix', prefixes: ['fix:']}]}});
+    await wait();
+    expect(state('aplicavel') === 'pass' && !item('escopo'), 'mixed policy must only show applicable rules');
+    expect(panel().querySelector('summary').textContent.includes('1 aprovada(s)'), 'skipped rules must not count as approved');
+  }
+  await chrome.storage.local.set({policy: {version: 1, blockMerge: true, rules: savedPolicy.rules.map(rule => ({...rule, enabled: false}))}});
+  await wait();
+  expect(panel().querySelector('summary').textContent.includes('regras desativadas'), 'disabled policy must not claim approval');
+  expect(panel().querySelector('summary').dataset.state === 'unknown' && !items().length, 'disabled rules must be neutral');
+  expect(!document.querySelector('[data-pr-guard-blocked]'), 'disabled rules must not block merge');
+  await chrome.storage.local.set({policy: savedPolicy});
+  await wait();
   const action = document.querySelector('#merge-action');
   action.textContent = 'Merge pull request';
   await wait();
@@ -86,6 +139,67 @@ const expect = (condition, message) => { if (!condition) throw Error(message); }
   const loaded = new Promise(resolve => options.onload = resolve);
   document.body.append(options);
   await loaded;
+  await wait();
+  const optionsDoc = options.contentDocument;
+  const importInput = optionsDoc.querySelector('#import');
+  const importButton = optionsDoc.querySelector('#import-button');
+  const policyEditor = optionsDoc.querySelector('#policy');
+  const importStatus = () => optionsDoc.querySelector('#status').textContent;
+  const importFile = async (text, name = 'regras.json') => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([text], name, {type: 'application/json'}));
+    importInput.files = transfer.files;
+    const settled = new Promise(resolve => {
+      const observer = new MutationObserver(() => {
+        if (!importButton.disabled) { observer.disconnect(); resolve(); }
+      });
+      observer.observe(optionsDoc.querySelector('#status'), {childList: true, subtree: true});
+    });
+    importInput.dispatchEvent(new Event('change', {bubbles: true}));
+    await settled;
+  };
+  let pickerClicks = 0;
+  importInput.addEventListener('click', event => { event.preventDefault(); pickerClicks++; });
+  importButton.click();
+  expect(pickerClicks === 1, 'options tab must open file picker');
+  const imported = {version: 1, rules: [{id: 'importada', type: 'title-prefix', prefixes: ['fix:']}]};
+  await importFile(JSON.stringify(imported));
+  expect(JSON.stringify(JSON.parse(policyEditor.value)) === JSON.stringify(imported), 'valid JSON must populate editor: ' + importStatus());
+  expect(importStatus().includes('Salvar regras'), 'import must explain the save step');
+  expect(JSON.stringify((await chrome.storage.local.get('policy')).policy) === originalPolicy, 'import must not apply unsaved rules');
+  expect(importInput.value === '' && !importButton.disabled, 'import must reset picker for reselecting the same file');
+  policyEditor.value = '{}';
+  await importFile('\uFEFF' + JSON.stringify(imported));
+  expect(JSON.stringify(JSON.parse(policyEditor.value)) === JSON.stringify(imported), 'UTF-8 BOM and reimport must work: ' + importStatus() + ' / ' + policyEditor.value);
+  const importedText = policyEditor.value;
+  for (const invalid of ['{broken', JSON.stringify({version: 1, rules: [{id: 'bad', type: 'invalid'}]}), ' '.repeat(100001)]) {
+    await importFile(invalid);
+    expect(importStatus().includes('Não foi possível importar'), 'invalid import must show a readable error');
+    expect(policyEditor.value === importedText, 'failed import must preserve editor');
+    expect(importInput.value === '' && !importButton.disabled, 'failed import must allow retry');
+  }
+  const statusBeforeCancel = importStatus();
+  importInput.dispatchEvent(new Event('change', {bubbles: true}));
+  await wait();
+  expect(policyEditor.value === importedText && importStatus() === statusBeforeCancel, 'cancel must preserve editor and status');
+  optionsDoc.querySelector('#save').click();
+  await wait();
+  expect(JSON.stringify((await chrome.storage.local.get('policy')).policy) === JSON.stringify(imported), 'save must persist imported policy');
+  expect(state('importada') === 'pass', 'saving import must reevaluate open PR');
+  let optionsOpened = 0;
+  chrome.extension.getViews = () => [options.contentWindow];
+  chrome.runtime.openOptionsPage = async () => { optionsOpened++; };
+  importButton.click();
+  await wait();
+  expect(optionsOpened === 1 && pickerClicks === 1, 'popup must open persistent options without opening a file dialog');
+  chrome.runtime.openOptionsPage = async () => { throw Error('options unavailable'); };
+  importButton.click();
+  await wait();
+  expect(importStatus().includes('options unavailable'), 'failure opening options must be visible');
+  chrome.extension.getViews = () => [];
+  delete chrome.runtime.openOptionsPage;
+  policyEditor.value = originalPolicy;
+  optionsDoc.querySelector('#save').click();
   await wait();
   const toggle = options.contentDocument.querySelector('#enabled');
   expect(toggle.textContent === 'ON' && !toggle.disabled, 'options must show current enabled state');
@@ -154,7 +268,7 @@ const expect = (condition, message) => { if (!condition) throw Error(message); }
 } catch (error) { document.body.dataset.result = 'failed: ' + error.message; } })();`;
 const pages = new Map(await Promise.all(['react', 'legacy', 'off', 'outside', 'empty'].map(async layout => {
   const fixture = await readFile(new URL(`test/fixtures/pr-${layout === 'legacy' ? 'legacy' : 'react'}.html`, root), 'utf8');
-  return [layout, `<!doctype html><html><body>${fixture}
+  return [layout, `<!doctype html><html><head><meta charset="utf-8"></head><body>${fixture}
     <script>${storageMock}</script>
     ${[...scripts.keys()].map(path => `<script src="${path}"></script>`).join('')}
     <script>${checks}</script></body></html>`];
@@ -175,7 +289,7 @@ try {
     try {
       const child = spawn(process.env.CHROME_BIN || 'google-chrome', [
         '--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run',
-        `--user-data-dir=${profile}`, '--dump-dom', '--virtual-time-budget=20000',
+        `--user-data-dir=${profile}`, '--dump-dom', '--virtual-time-budget=30000',
         `http://127.0.0.1:${server.address().port}/example/repo${layout === 'outside' ? '' : '/pull/1'}?layout=${layout}`,
       ]);
       let output = '', stderr = '';

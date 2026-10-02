@@ -9,9 +9,8 @@ textarea { box-sizing: border-box; width: 100%; margin-top: 8px; padding: 16px; 
 textarea:focus { outline: 2px solid #80dfc3; }
 #help, .note { font-size: 12px; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
-button, .import { border: 1px solid #80dfc3; border-radius: 6px; padding: 9px 14px; background: #80dfc3; color: #101721; cursor: pointer; font: 600 13px system-ui; }
-.secondary, .import { background: transparent; color: #dce8f7; border-color: #52647d; }
-.import input { display: none; }
+button { border: 1px solid #80dfc3; border-radius: 6px; padding: 9px 14px; background: #80dfc3; color: #101721; cursor: pointer; font: 600 13px system-ui; }
+.secondary { background: transparent; color: #dce8f7; border-color: #52647d; }
 #status { min-height: 24px; color: #80dfc3; }
 
 .activation { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 16px; border: 1px solid #38465b; border-radius: 8px; }

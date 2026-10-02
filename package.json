@@ -1,6 +1,6 @@
 {
   "name": "pr-guard",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "Regras configuráveis para pull requests e merge no GitHub",

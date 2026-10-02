@@ -1,12 +1,14 @@
 # PR Guard
 
 Extensão de navegador e validador de políticas para padronizar pull requests no GitHub.
-Versão **0.1.2**, para Chrome/Edge (Manifest V3), com interface em português.
+Versão **0.1.5**, para Chrome/Edge (Manifest V3), com interface em português.
 
 ## O que já funciona
 
 - Editor de regras JSON, com validação, importação e exportação.
 - Escopo por repositório, branch de origem e destino; `*` funciona como curinga.
+  Filtros de branches (`head` e `base`) aceitam maiúsculas e minúsculas: `PLBUX-*`
+  também corresponde a `plbux-9515/data-structure`.
 - Validação de prefixo do título, seções preenchidas da descrição e checklist.
 - Aviso quando o método de merge identificado difere do configurado.
 - Verificação no Actions do arquivamento da mudança OpenSpec vinculada ao PR.
@@ -35,6 +37,10 @@ as regras ou alterar os checks do GitHub Actions. A preferência é mantida ao r
 
 Depois de alterar o código: rode o build, recarregue a extensão e a página do PR.
 Para validar a seleção de merge, siga o [roteiro de teste manual](docs/TESTE-MANUAL.md).
+O painel mostra quantas regras foram aprovadas e distingue regras desativadas ou fora
+do escopo de verificações realizadas. A lista mostra apenas as regras aplicáveis
+ao PR. Quando nenhuma se aplica, o painel exibe os filtros que não corresponderam
+e os valores de repositório e branches lidos do PR para ajudar na configuração.
 O painel distingue pendências de verificações não realizadas; controles de merge
 ambíguos ou ausentes não são tratados como aprovação.
 A extensão não precisa de token, não envia dados para serviços externos e armazena
@@ -44,6 +50,10 @@ a configuração somente no navegador, com `chrome.storage.local`.
 
 Novas instalações começam **sem regras configuradas**, com `{"version": 1, "rules": []}`.
 Cada pessoa deve adicionar ou importar sua política nas opções e clicar em **Salvar regras**.
+No popup do ícone, **Importar JSON em uma aba** abre as configurações em uma aba
+permanente. Nela, clique em **Importar JSON**, selecione o arquivo, confira o conteúdo
+e clique em **Salvar regras**. Arquivos UTF-8 com BOM também são aceitos; erros de
+importação preservam o conteúdo atual do editor.
 [policy.example.json](policy.example.json) é apenas um exemplo genérico opcional; suas regras
 não são incorporadas ao build. Configurações já salvas no navegador continuam disponíveis.
 

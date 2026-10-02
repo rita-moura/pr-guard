@@ -72,3 +72,44 @@ test('avisos não bloqueiam; erros e resultados desconhecidos bloqueiam', () => 
   assert.equal(hasFailures([{ severity: 'error', status: 'unknown' }]), true);
   assert.equal(hasFailures([{ severity: 'error', status: 'skip' }]), false);
 });
+
+test('regra fora do escopo informa o filtro, valor lido e padrões esperados', () => {
+  const result = run({type: 'title-prefix', prefixes: ['PLBUX-'], when: {base: ['main', 'release/*']}}, {base: 'mercury'});
+  assert.equal(result.status, 'skip');
+  assert.match(result.detail, /base = "mercury"; esperado: "main" ou "release\/\*"/);
+});
+test('PR MaxDiff no padrão passa quando os filtros incluem suas branches', () => {
+  const context = {
+    title: 'PLBUX-9515 Database structure for MaxDiffs',
+    head: 'plbux-9515/data-structure', base: 'mercury',
+    body: '## Summary\nAdd MaxDiff as a question type.\n## Testing\nRun migrations and API tests.',
+  };
+  const when = {head: ['PLBUX-*'], base: ['mercury']};
+  assert.equal(run({type: 'title-prefix', prefixes: ['PLBUX-'], requireNumber: true, when}, context).status, 'pass');
+  assert.equal(run({type: 'body-sections', sections: ['Description|Summary', 'Testing'], when}, context).status, 'pass');
+});
+
+test('filtros de branches aceitam maiúsculas, minúsculas e combinações', () => {
+  for (const key of ['head', 'base']) {
+    for (const pattern of ['PLBUX-*', 'plbux-*']) {
+      const rule = {type: 'merge-method', method: 'squash', when: {[key]: [pattern]}};
+      for (const branch of ['PLBUX-9515/data-structure', 'plbux-9515/data-structure', 'PlBuX-9515/data-structure']) {
+        assert.equal(run(rule, {[key]: branch, mergeMethod: 'squash'}).status, 'pass');
+        assert.equal(run(rule, {[key]: branch, mergeMethod: 'merge'}).status, 'fail');
+      }
+      assert.equal(run(rule, {[key]: 'other-9515', mergeMethod: 'squash'}).status, 'skip');
+      assert.equal(run(rule, {}).status, 'unknown');
+    }
+  }
+  const sync = {type: 'merge-method', method: 'merge', when: {head: ['sync/*', 'sync-*']}};
+  for (const head of ['sync/main', 'SYNC/main', 'Sync-main']) {
+    assert.equal(run(sync, {head, mergeMethod: 'merge'}).status, 'pass');
+  }
+});
+test('comparação de branches preserva curingas e caracteres literais', () => {
+  assert.equal(globMatches('FIX/a.b', 'fix/a.b', true), true);
+  assert.equal(globMatches('FIX/a.b', 'fix/axb', true), false);
+  assert.equal(globMatches('PLBUX-*', 'other/plbux-123', true), false);
+  assert.equal(globMatches('PLBUX-*', 'plbux-123'), false);
+  assert.equal(run({type: 'title-prefix', prefixes: ['PLBUX-'], requireNumber: true, when: {head: ['PLBUX-*']}}, {head: 'plbux-123', title: 'plbux-123 Ajuste'}).status, 'fail');
+});

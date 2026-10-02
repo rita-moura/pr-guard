@@ -1,7 +1,12 @@
 /* global PRGuard, chrome */
 const editor = document.querySelector('#policy');
 const status = document.querySelector('#status');
-const readPolicy = () => PRGuard.validatePolicy(JSON.parse(editor.value));
+const parsePolicy = text => PRGuard.validatePolicy(JSON.parse(text.replace(/^\uFEFF/, '')));
+const readPolicy = () => parsePolicy(editor.value);
+const importInput = document.querySelector('#import');
+const importButton = document.querySelector('#import-button');
+const isPopup = () => chrome.extension.getViews({ type: 'popup' }).includes(window);
+if (isPopup()) importButton.textContent = 'Importar JSON em uma aba';
 const toggle = document.querySelector('#enabled');
 const enabledStatus = document.querySelector('#enabled-status');
 let enabled = true;
@@ -37,15 +42,30 @@ document.querySelector('#save').addEventListener('click', async () => {
     status.textContent = 'Regras salvas. Os PRs abertos serão reavaliados.';
   } catch (error) { status.textContent = `Não foi possível salvar: ${error.message}`; }
 });
-document.querySelector('#import').addEventListener('change', async event => {
+importButton.addEventListener('click', async () => {
+  if (isPopup()) {
+    // File dialogs can close the action popup. Use the persistent options page.
+    try { await chrome.runtime.openOptionsPage(); }
+    catch (error) { status.textContent = `Não foi possível abrir as configurações: ${error.message}`; }
+    return;
+  }
+  importInput.click();
+});
+importInput.addEventListener('change', async () => {
+  const file = importInput.files[0];
+  if (!file) return;
+  importButton.disabled = true;
   try {
-    const file = event.target.files[0];
-    if (!file) return;
     if (file.size > 100_000) throw new Error('Arquivo acima de 100 KB.');
-    const policy = PRGuard.validatePolicy(JSON.parse(await file.text()));
+    const policy = parsePolicy(await file.text());
     editor.value = JSON.stringify(policy, null, 2);
-    status.textContent = 'Política importada para edição. Clique em Salvar regras para aplicar.';
-  } catch (error) { status.textContent = error.message; }
+    status.textContent = `Arquivo ${file.name} importado para edição. Clique em Salvar regras para aplicar.`;
+  } catch (error) { status.textContent = `Não foi possível importar: ${error.message}`; }
+  finally {
+    // Allow selecting the same file again after correcting it or editing the JSON.
+    importInput.value = '';
+    importButton.disabled = false;
+  }
 });
 document.querySelector('#export').addEventListener('click', () => {
   try {

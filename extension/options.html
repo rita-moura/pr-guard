@@ -25,7 +25,8 @@
     <div class="actions">
       <button id="save">Salvar regras</button>
       <button id="export" class="secondary">Exportar JSON</button>
-      <label class="import">Importar JSON<input id="import" type="file" accept="application/json,.json"></label>
+      <button id="import-button" type="button" class="secondary">Importar JSON</button>
+      <input id="import" type="file" accept="application/json,.json" hidden>
     </div>
     <p id="status" role="status" aria-live="polite"></p>
     <p class="note">Adicione a regra OpenSpec quando sua equipe exigir arquivamento antes do merge. O Actions faz a inspeção dos arquivos; a extensão orienta sobre o vínculo.</p>
