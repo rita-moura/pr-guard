@@ -19,7 +19,9 @@ function showEnabled(value) {
     : 'Desligado neste navegador. Suas regras continuam salvas.';
 }
 chrome.storage.local.get(['policy', 'enabled']).then(data => {
-  editor.value = JSON.stringify(data.policy ?? PRGuard.defaults, null, 2);
+  const policy = data.policy?.rules?.length || data.policySeeded ? (data.policy ?? PRGuard.defaults) : PRGuard.defaults;
+  editor.value = JSON.stringify(policy, null, 2);
+  if (!data.policy?.rules?.length && !data.policySeeded) chrome.storage.local.set({ policy, policySeeded: true });
   showEnabled(data.enabled);
   toggle.disabled = false;
 }).catch(error => { enabledStatus.textContent = `Não foi possível carregar: ${error.message}`; });
@@ -38,7 +40,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 document.querySelector('#save').addEventListener('click', async () => {
   try {
-    await chrome.storage.local.set({ policy: readPolicy() });
+    await chrome.storage.local.set({ policy: readPolicy(), policySeeded: true });
     status.textContent = 'Regras salvas. Os PRs abertos serão reavaliados.';
   } catch (error) { status.textContent = `Não foi possível salvar: ${error.message}`; }
 });

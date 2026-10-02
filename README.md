@@ -48,8 +48,9 @@ a configuração somente no navegador, com `chrome.storage.local`.
 
 ## Configurar a política da empresa
 
-Novas instalações começam **sem regras configuradas**, com `{"version": 1, "rules": []}`.
-Cada pessoa deve adicionar ou importar sua política nas opções e clicar em **Salvar regras**.
+O pacote inclui uma política inicial com as regras PLBUX e sync. Ela é carregada automaticamente
+na primeira abertura; depois, a configuração salva no navegador passa a ter prioridade.
+Cada pessoa pode editar ou importar sua política nas opções e clicar em **Salvar regras**.
 No popup do ícone, **Importar JSON em uma aba** abre as configurações em uma aba
 permanente. Nela, clique em **Importar JSON**, selecione o arquivo, confira o conteúdo
 e clique em **Salvar regras**. Arquivos UTF-8 com BOM também são aceitos; erros de

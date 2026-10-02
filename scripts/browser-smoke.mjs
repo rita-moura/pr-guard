@@ -17,7 +17,7 @@ else {
   const listeners = [];
   const data = {policy: ${JSON.stringify(storedPolicy)}};
   if (new URLSearchParams(location.search).get('layout') === 'off') data.enabled = false;
-  if (new URLSearchParams(location.search).get('layout') === 'empty') delete data.policy;
+  if (new URLSearchParams(location.search).get('layout') === 'empty') { data.policy = {version: 1, rules: []}; data.policySeeded = true; }
   window.chrome = {extension: {getViews: () => []}, runtime: {getManifest: () => ({version: '${manifest.version}'})}, storage: {
     local: {get: async () => ({...data}), set: async values => {
       const changes = Object.fromEntries(Object.entries(values).map(([key, newValue]) => [key, {oldValue: data[key], newValue}]));
@@ -45,7 +45,7 @@ const expect = (condition, message) => { if (!condition) throw Error(message); }
     await wait();
   }
   if (new URLSearchParams(location.search).get('layout') === 'empty') {
-    expect(JSON.stringify(PRGuard.defaults) === JSON.stringify({version: 1, rules: []}), 'build must not include preset company rules');
+    expect(PRGuard.defaults.version === 1 && PRGuard.defaults.blockMerge === true && PRGuard.defaults.rules.length === 5, 'build must include the bundled company rules');
     expect(panel().querySelector('summary').textContent.includes('sem regras'), 'new install must explain missing configuration');
     expect(!panel().querySelector('#empty-state').hidden && !panel().querySelector('li'), 'new install must not claim checks passed');
     expect(!document.querySelector('[data-pr-guard-blocked]'), 'new install must not block merge');

@@ -6,8 +6,8 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(new URL('extension/', root), output, { recursive: true });
 const engine = (await readFile(new URL('src/engine.js', root), 'utf8')).replace(/^export /gm, '');
-// New installations start without company rules; users import their own policy.
-const policy = validatePolicy({ version: 1, rules: [] });
+const policy = validatePolicy(JSON.parse(await readFile(new URL('policy.default.json', root), 'utf8')));
+await writeFile(new URL('pr-guard.json', output), JSON.stringify(policy, null, 2) + '\n');
 await writeFile(new URL('engine.js', output), `(() => {\n${engine}\nglobalThis.PRGuard = { evaluate, validatePolicy, hasFailures, defaults: ${JSON.stringify(policy)} };\n})();\n`);
 const githubMerge = (await readFile(new URL('src/github-merge.js', root), 'utf8')).replace(/^export /gm, '');
 await writeFile(new URL('github-merge.js', output), `(() => {\n${githubMerge}\nglobalThis.PRGuardGitHub = { methodFromButton, selectedMergeMethod };\n})();\n`);

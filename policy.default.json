@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "blockMerge": true,
+  "rules": [
+    {
+      "id": "titulo-jira",
+      "type": "title-prefix",
+      "prefixes": [
+        "PLBUX-"
+      ],
+      "requireNumber": true,
+      "when": {
+        "head": [
+          "PLBUX-*"
+        ]
+      },
+      "severity": "error",
+      "message": "O título deve seguir o formato PLBUX-<N> <Descrição breve>. O ID do Jira é obrigatório antes do merge final."
+    },
+    {
+      "id": "template-obrigatorio",
+      "type": "body-sections",
+      "sections": [
+        "Issues",
+        "Description|Summary",
+        "Testing"
+      ],
+      "placeholders": [
+        "Hyperlink any issues related to this PR",
+        "Clubhouse issue.",
+        "[Provide a brief description",
+        "[Describe which platform"
+      ],
+      "when": {
+        "head": [
+          "PLBUX-*"
+        ]
+      },
+      "severity": "error",
+      "message": "Preencha Issues (link do Jira), Description (ou Summary) e Testing do template, substituindo os textos de exemplo. Em bug, explique por que a correção resolve o problema; em story, descreva o mecanismo."
+    },
+    {
+      "id": "template-deployment",
+      "type": "body-sections",
+      "sections": [
+        "Deployment"
+      ],
+      "placeholders": [
+        "Does this pull request require data migrations"
+      ],
+      "when": {
+        "head": [
+          "PLBUX-*"
+        ]
+      },
+      "severity": "warning",
+      "message": "Informe mudanças de deploy (migrations, scripts, variáveis de ambiente, pacotes, schema). Se não houver, escreva \"Nenhuma\"."
+    },
+    {
+      "id": "squash-tarefa",
+      "type": "merge-method",
+      "method": "squash",
+      "when": {
+        "head": [
+          "PLBUX-*"
+        ]
+      },
+      "severity": "error",
+      "message": "Branches PLBUX- devem usar SQUASH AND MERGE. Depois do merge, apague a branch remota."
+    },
+    {
+      "id": "merge-commit-sync",
+      "type": "merge-method",
+      "method": "merge",
+      "when": {
+        "head": [
+          "sync/*",
+          "sync-*"
+        ]
+      },
+      "severity": "error",
+      "message": "Branches de sync devem usar CREATE A MERGE COMMIT para preservar o histórico."
+    }
+  ]
+}

@@ -157,7 +157,7 @@
     timer = setTimeout(() => render(), 250);
   };
   chrome.storage.local.get(['policy', 'enabled']).then(data => {
-    policy = data.policy ?? PRGuard.defaults;
+    policy = data.policy?.rules?.length || data.policySeeded ? (data.policy ?? PRGuard.defaults) : PRGuard.defaults;
     enabled = data.enabled !== false;
     render();
   });
