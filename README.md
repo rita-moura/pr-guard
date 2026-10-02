@@ -1,7 +1,7 @@
 # PR Guard
 
 Extensão de navegador e validador de políticas para padronizar pull requests no GitHub.
-Versão **0.1.1**, para Chrome/Edge (Manifest V3), com interface em português.
+Versão **0.1.2**, para Chrome/Edge (Manifest V3), com interface em português.
 
 ## O que já funciona
 
@@ -27,6 +27,12 @@ npm run build
 4. Abra um PR no GitHub. O painel PR Guard aparece no canto inferior direito.
 5. Clique no ícone da extensão para editar as regras.
 
+O painel aparece somente na aba **Conversation** do PR (`/dono/repo/pull/numero`).
+Ele fica oculto em Commits, Checks, Files changed e nas demais páginas do GitHub.
+Pelo ícone da extensão, use **ON/OFF** para ligar ou desligar o PR Guard neste navegador.
+OFF oculta o painel e suspende alertas e bloqueio local em todas as abas, sem apagar
+as regras ou alterar os checks do GitHub Actions. A preferência é mantida ao reabrir o navegador.
+
 Depois de alterar o código: rode o build, recarregue a extensão e a página do PR.
 Para validar a seleção de merge, siga o [roteiro de teste manual](docs/TESTE-MANUAL.md).
 O painel distingue pendências de verificações não realizadas; controles de merge
@@ -36,7 +42,12 @@ a configuração somente no navegador, com `chrome.storage.local`.
 
 ## Configurar a política da empresa
 
-Comece por [policy.example.json](policy.example.json). A configuração local da extensão
+Novas instalações começam **sem regras configuradas**, com `{"version": 1, "rules": []}`.
+Cada pessoa deve adicionar ou importar sua política nas opções e clicar em **Salvar regras**.
+[policy.example.json](policy.example.json) é apenas um exemplo genérico opcional; suas regras
+não são incorporadas ao build. Configurações já salvas no navegador continuam disponíveis.
+
+A configuração local da extensão
 e o arquivo `.github/pr-guard.json` do CI são independentes nesta versão: importe/exporte
 o mesmo arquivo para mantê-los alinhados. Sincronização automática ainda não existe.
 
@@ -71,8 +82,8 @@ o mesmo arquivo para mantê-los alinhados. Sincronização automática ainda nã
 
 | Tipo | Campos específicos | Critério |
 | --- | --- | --- |
-| `title-prefix` | `prefixes` | Um prefixo permitido e uma descrição não vazia |
-| `body-sections` | `sections` | Títulos Markdown e conteúdo, desconsiderando comentários e blocos de código cercados |
+| `title-prefix` | `prefixes`, `requireNumber` (opcional) | Um prefixo permitido e uma descrição não vazia; com `requireNumber: true`, o prefixo deve ser seguido de dígitos, espaço ou `:` e a descrição (ex.: `TASK-123 Ajusta X`) |
+| `body-sections` | `sections`, `placeholders` (opcional) | Títulos Markdown e conteúdo, desconsiderando comentários, blocos de código cercados e linhas que contenham algum texto de `placeholders`; `"Description\|Summary"` aceita qualquer um dos títulos |
 | `checklist` | — | Ao menos um item e todos os itens marcados |
 | `merge-method` | `method`: `squash`, `merge` ou `rebase` | Método reconhecido na interface |
 | `openspec-archived` | — | Mudança vinculada arquivada e ausente da pasta ativa |
@@ -82,7 +93,7 @@ O CI falha para `fail`/`unknown` de severidade `error`; nunca assume aprovação
 
 ## OpenSpec
 
-A regra começa desativada. Quando o fluxo exigir arquivamento **antes do merge**, ative-a
+A regra não é adicionada automaticamente. Quando o fluxo exigir arquivamento **antes do merge**, configure-a
 e inclua na descrição uma linha fora de comentários/blocos de código:
 
 ```text
@@ -119,7 +130,7 @@ explicitamente no CI. Use os métodos permitidos do GitHub para impor essa restr
 
 ## Limites desta versão
 
-- Extensão orientativa, sem bloqueio de merge no servidor e sem alterar configurações do GitHub.
+- Com `"blockMerge": true` na raiz da política, a extensão bloqueia o clique nos botões de merge (e os deixa esmaecidos) enquanto houver `fail`/`unknown` de severidade `error`. O bloqueio é local: não vale para quem não usa a extensão, nem para merges pela API ou pelo app. Para bloqueio real, use rulesets e checks obrigatórios do GitHub. Sem o campo, a extensão só orienta e não altera configurações do GitHub.
 - Adaptador inicial para páginas de PR existentes no github.com, com botões em inglês.
   A tela de criação de PR, GitHub Enterprise e variações do layout ainda precisam de suporte.
 - Seletores podem mudar com a interface do GitHub; dados ausentes aparecem como pendentes.
@@ -147,3 +158,11 @@ docs/ROADMAP.md         Próximas etapas
 - [Conceitos de arquivamento OpenSpec](https://github.com/Fission-AI/OpenSpec/blob/main/docs/concepts.md)
 
 Projeto privado. Nenhuma licença de redistribuição foi concedida nesta versão.
+
+## Ícone da extensão
+
+O escudo com símbolo de pull request identifica o PR Guard na barra do navegador.
+A fonte vetorial está em `extension/icons/icon.svg`, acompanhada dos PNGs de 16, 32,
+48 e 128 px. Depois de editar o SVG, execute `npm run build:icons` (requer Chrome;
+`CHROME_BIN` permite indicar o executável) e `npm run build`. O build normal usa os
+PNGs já incluídos no projeto e não precisa do Chrome.

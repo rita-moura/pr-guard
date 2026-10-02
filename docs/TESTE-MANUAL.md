@@ -5,10 +5,11 @@ exija Squash. O PR desta correção pode ser usado no teste.
 
 1. Execute `npm test` e `npm run build` nesta branch.
 2. Em `chrome://extensions`, recarregue o PR Guard. Se ainda não estiver instalado,
-   carregue `/home/rita/LumeraCode/pr-guard/dist/extension` sem compactação.
-   Recarregue também a página do PR e confirme **PR Guard 0.1.1** no rodapé do painel.
-3. Nas opções da extensão, importe `policy.example.json` se precisar restaurar a
-   política de exemplo. Isso substitui a configuração local: exporte antes se quiser preservá-la.
+   carregue a pasta `dist/extension` do projeto sem compactação.
+   Recarregue também a página do PR e confirme **PR Guard 0.1.2** no rodapé do painel.
+3. Nas opções da extensão, importe `policy.example.json` e clique em **Salvar regras**
+   para aplicar a política de teste. Novas instalações vêm sem regras. Exporte sua
+   configuração atual antes de substituí-la se quiser preservá-la.
 4. Abra ou recarregue a página do PR e vá até os controles de merge.
 5. Selecione **Squash and merge**: a regra `squash` deve ser aprovada.
 6. Abra o menu de métodos sem escolher outro: as opções do menu não devem mudar
@@ -36,3 +37,23 @@ Depois de `npm run build`, execute `npm run test:browser`. Requer Chrome instala
 um perfil temporário e páginas locais com fixtures dos layouts antigo e React,
 incluindo atualização do título, checklist e método, branches de fork e dados ausentes.
 Não acessa sua sessão do GitHub.
+
+## Ligar, desligar e navegar
+
+1. No ícone da extensão, confirme **ON** no topo das opções.
+2. Em um PR com pendência, altere para **OFF**: o painel desaparece e o bloqueio
+   local deixa de interceptar os botões. As regras permanecem salvas.
+3. Feche e reabra as opções: o controle deve continuar em **OFF**.
+4. Volte para **ON**: os PRs abertos são reavaliados, sem precisar recarregar.
+5. Navegue para Commits, Checks, Files changed, o repositório, a lista de PRs ou uma issue:
+   o painel deve sumir. Ao voltar para **Conversation** do PR, ele deve reaparecer se estiver em **ON**.
+
+O controle vale para todas as abas deste perfil do navegador. Ele não altera os
+checks do GitHub Actions nem as proteções do repositório.
+
+## Instalação sem regras
+
+Em uma instalação sem política salva, o editor deve começar com
+`{"version": 1, "rules": []}` e o painel deve indicar **sem regras**. Nenhum método de merge
+é bloqueado antes de configurar uma política. Importar o exemplo genérico e salvar
+ativa as verificações; salvar novamente uma lista vazia remove as verificações.

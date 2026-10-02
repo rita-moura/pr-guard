@@ -13,3 +13,13 @@ button, .import { border: 1px solid #80dfc3; border-radius: 6px; padding: 9px 14
 .secondary, .import { background: transparent; color: #dce8f7; border-color: #52647d; }
 .import input { display: none; }
 #status { min-height: 24px; color: #80dfc3; }
+
+.activation { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 16px; border: 1px solid #38465b; border-radius: 8px; }
+.activation p { margin: 3px 0 0; font-size: 12px; }
+#enabled { min-width: 76px; border-radius: 20px; }
+#enabled[aria-checked="false"] { background: #38465b; color: #e7edf6; border-color: #52647d; }
+button:focus-visible { outline: 2px solid #e7edf6; outline-offset: 3px; }
+button:disabled { opacity: .6; cursor: wait; }
+#enabled-status { margin: 6px 0; font-size: 12px; }
+
+.brand-icon { float: right; margin-left: 12px; }

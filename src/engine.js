@@ -5,6 +5,7 @@ const stringList = value => Array.isArray(value) && value.length > 0 && value.ev
 
 export function validatePolicy(policy) {
   if (!policy || policy.version !== 1 || !Array.isArray(policy.rules) || policy.rules.length > 100) throw new Error('Use version: 1 e até 100 regras.');
+  if (policy.blockMerge !== undefined && typeof policy.blockMerge !== 'boolean') throw new Error('blockMerge deve ser true ou false.');
   const ids = new Set();
   for (const rule of policy.rules) {
     if (!rule || typeof rule.id !== 'string' || !/^[a-z0-9-]{1,80}$/.test(rule.id) || ids.has(rule.id)) throw new Error('Cada regra precisa de um id único (letras minúsculas, números e hífen).');
@@ -20,7 +21,9 @@ export function validatePolicy(policy) {
       }
     }
     if (rule.type === 'title-prefix' && !stringList(rule.prefixes)) throw new Error(`Informe prefixes em ${rule.id}.`);
+    if (rule.type === 'title-prefix' && rule.requireNumber !== undefined && typeof rule.requireNumber !== 'boolean') throw new Error(`requireNumber inválido: ${rule.id}`);
     if (rule.type === 'body-sections' && !stringList(rule.sections)) throw new Error(`Informe sections em ${rule.id}.`);
+    if (rule.type === 'body-sections' && rule.placeholders !== undefined && !stringList(rule.placeholders)) throw new Error(`placeholders inválido: ${rule.id}`);
     if (rule.type === 'merge-method' && !methods.includes(rule.method)) throw new Error(`Método inválido: ${rule.id}`);
   }
   return policy;
@@ -63,17 +66,23 @@ export function evaluate(policy, context) {
     }
     if (rule.type === 'title-prefix') {
       if (context.title == null) return result('unknown', 'Título indisponível.');
-      const valid = rule.prefixes.some(prefix => context.title.startsWith(prefix) && context.title.slice(prefix.length).trim());
-      return result(valid ? 'pass' : 'fail', `O título deve começar com ${rule.prefixes.join(' ou ')} e conter uma descrição.`);
+      // requireNumber: the prefix must be followed by digits, a separator and a description (e.g. "TASK-123 Ajusta X").
+      const rest = prefix => context.title.slice(prefix.length);
+      const valid = rule.prefixes.some(prefix => context.title.startsWith(prefix) && (rule.requireNumber ? /^\d+[\s:]+\S/.test(rest(prefix)) : rest(prefix).trim()));
+      const format = rule.prefixes.map(prefix => rule.requireNumber ? `${prefix}<número>` : prefix).join(' ou ');
+      return result(valid ? 'pass' : 'fail', `O título deve começar com ${format} e conter uma descrição.`);
     }
     if (rule.type === 'body-sections') {
       if (context.body == null) return result('unknown', 'Descrição indisponível.');
       const sections = sectionsFromBody(context.body);
-      const missing = rule.sections.filter(name => {
-        const value = sections.get(name.toLocaleLowerCase('pt-BR'))?.trim() ?? '';
-        return !value || /^(?:[-\s.]|tbd|todo|preencher|n\/a)*$/i.test(value);
-      });
-      return result(missing.length ? 'fail' : 'pass', missing.length ? `Preencha as seções: ${missing.join(', ')}.` : 'Seções obrigatórias preenchidas.');
+      // Lines still containing template example text count as unfilled.
+      const filled = text => text.split('\n').filter(line => !(rule.placeholders ?? []).some(p => line.includes(p))).join('\n').trim();
+      // "Description|Summary": any of the alternative headings satisfies the section.
+      const missing = rule.sections.filter(name => !name.split('|').some(alias => {
+        const value = filled(sections.get(alias.trim().toLocaleLowerCase('pt-BR')) ?? '');
+        return value && !/^(?:[-\s.]|tbd|todo|preencher|n\/a)*$/i.test(value);
+      }));
+      return result(missing.length ? 'fail' : 'pass', missing.length ? `Preencha as seções: ${missing.map(name => name.split('|').map(alias => alias.trim()).join(' ou ')).join(', ')}.` : 'Seções obrigatórias preenchidas.');
     }
     if (rule.type === 'checklist') {
       if (context.body == null) return result('unknown', 'Descrição indisponível.');

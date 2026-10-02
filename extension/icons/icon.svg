@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <title>PR Guard — escudo com símbolo de pull request</title>
+  <path d="M64 7 111 25v34c0 29-19 49-47 62C36 108 17 88 17 59V25Z" fill="#80dfc3" stroke="#101721" stroke-width="5" stroke-linejoin="round"/>
+  <g stroke="#101721" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 47v27M83 74V52c0-7-4-11-11-11H63m8-10L61 41l10 10"/>
+    <circle cx="44" cy="39" r="8"/>
+    <circle cx="44" cy="82" r="8"/>
+    <circle cx="83" cy="82" r="8"/>
+  </g>
+</svg>

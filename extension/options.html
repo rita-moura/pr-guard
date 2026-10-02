@@ -10,19 +10,25 @@
 </head>
 <body>
   <main>
+    <img class="brand-icon" src="icons/icon48.png" width="48" height="48" alt="">
     <p class="eyebrow">PR GUARD / CONFIGURAÇÃO LOCAL</p>
+    <section class="activation" aria-label="Ativação da extensão">
+      <div><strong>PR Guard</strong><p id="enabled-help">Ligado somente na aba Conversation dos pull requests.</p></div>
+      <button id="enabled" type="button" role="switch" aria-checked="true" aria-label="Ativar PR Guard" aria-describedby="enabled-help" disabled>ON</button>
+    </section>
+    <p id="enabled-status" role="status" aria-live="polite"></p>
     <h1>O padrão da sua equipe.</h1>
-    <p>Edite as regras, importe um arquivo da empresa ou exporte a política para o repositório. As mudanças abaixo afetam este navegador.</p>
+    <p>Adicione suas regras ou importe um arquivo de política e clique em Salvar regras. Novas instalações começam sem regras configuradas. As mudanças afetam este navegador.</p>
     <label for="policy">Política JSON · versão 1</label>
     <textarea id="policy" spellcheck="false" rows="22" aria-describedby="help"></textarea>
-    <p id="help">Tipos: title-prefix, body-sections, checklist, merge-method e openspec-archived. Use enabled: false para desativar; severity: "warning" para avisar. O escopo when aceita repository, head e base com listas de padrões e *.</p>
+    <p id="help">Tipos: title-prefix (com requireNumber: true opcional), body-sections, checklist, merge-method e openspec-archived. Use enabled: false para desativar; severity: "warning" para avisar. O escopo when aceita repository, head e base com listas de padrões e *.</p>
     <div class="actions">
       <button id="save">Salvar regras</button>
       <button id="export" class="secondary">Exportar JSON</button>
       <label class="import">Importar JSON<input id="import" type="file" accept="application/json,.json"></label>
     </div>
     <p id="status" role="status" aria-live="polite"></p>
-    <p class="note">OpenSpec começa desativado. Ative quando sua equipe exigir arquivamento antes do merge. O Actions faz a inspeção dos arquivos; a extensão orienta sobre o vínculo.</p>
+    <p class="note">Adicione a regra OpenSpec quando sua equipe exigir arquivamento antes do merge. O Actions faz a inspeção dos arquivos; a extensão orienta sobre o vínculo.</p>
   </main>
 </body>
 </html>
