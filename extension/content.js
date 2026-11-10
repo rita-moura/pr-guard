@@ -54,7 +54,7 @@
   function bodyMarkdown() {
     const edit = [...document.querySelectorAll('textarea[name="pull_request[body]"], textarea[name="issue[body]"]')].find(visible);
     if (edit) return edit.value;
-    const body = document.querySelector([
+    const selectors = [
       '.js-issue-body .comment-body',
       '.js-issue-body .markdown-body',
       '[data-testid="issue-body"] .markdown-body',
@@ -66,11 +66,22 @@
       '[class*="PullRequestDescription"]',
       '.js-command-palette-pull-body .markdown-body',
       '.js-command-palette-pull-body',
-    ].join(','));
-    if (!body) return undefined;
+    ];
+    const bodies = [...new Set(selectors.flatMap(selector => [...document.querySelectorAll(selector)]))].filter(visible);
+    if (!bodies.length) return undefined;
+    const headingSelector = 'h1,h2,h3,h4,h5,h6,[role="heading"],[data-heading-level],[class*="markdown-heading"]';
+    const score = body => {
+      const headings = [...body.querySelectorAll(headingSelector)].filter(node => !node.querySelector('h1,h2,h3,h4,h5,h6,[role="heading"],[data-heading-level]'));
+      const text = body.textContent.toLocaleLowerCase('pt-BR');
+      return headings.length * 10 + ['issues', 'summary', 'testing', 'deployment'].filter(section => text.includes(section)).length;
+    };
+    const body = bodies.sort((left, right) => score(right) - score(left))[0];
     const clone = body.cloneNode(true);
     clone.querySelectorAll('pre').forEach(node => node.remove());
-    clone.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(node => node.replaceWith(`\n## ${node.textContent}\n`));
+    clone.querySelectorAll(headingSelector).forEach(node => {
+      if (node.querySelector('h1,h2,h3,h4,h5,h6,[role="heading"],[data-heading-level]')) return;
+      node.replaceWith(`\n## ${node.textContent}\n`);
+    });
     clone.querySelectorAll('li.task-list-item').forEach(node => {
       const checkbox = node.querySelector('input[type="checkbox"]');
       node.prepend(`\n- [${checkbox?.checked ? 'x' : ' '}] `);
