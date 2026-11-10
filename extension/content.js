@@ -54,7 +54,19 @@
   function bodyMarkdown() {
     const edit = [...document.querySelectorAll('textarea[name="pull_request[body]"], textarea[name="issue[body]"]')].find(visible);
     if (edit) return edit.value;
-    const body = document.querySelector('.js-issue-body .comment-body, .js-issue-body .markdown-body, [data-testid="issue-body"] .markdown-body, .js-command-palette-pull-body .markdown-body');
+    const body = document.querySelector([
+      '.js-issue-body .comment-body',
+      '.js-issue-body .markdown-body',
+      '[data-testid="issue-body"] .markdown-body',
+      '[data-testid="issue-body"]',
+      '[data-testid="markdown-body"]',
+      '[data-testid*="markdown" i]',
+      '[class*="IssueCommentBody"]',
+      '[class*="PullRequestBody"]',
+      '[class*="PullRequestDescription"]',
+      '.js-command-palette-pull-body .markdown-body',
+      '.js-command-palette-pull-body',
+    ].join(','));
     if (!body) return undefined;
     const clone = body.cloneNode(true);
     clone.querySelectorAll('pre').forEach(node => node.remove());

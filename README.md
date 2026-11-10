@@ -1,7 +1,7 @@
 # PR Guard
 
 Extensão de navegador e validador de políticas para padronizar pull requests no GitHub.
-Versão **0.1.5**, para Chrome/Edge (Manifest V3), com interface em português.
+Versão **0.1.6**, para Chrome/Edge (Manifest V3), com interface em português.
 
 ## O que já funciona
 

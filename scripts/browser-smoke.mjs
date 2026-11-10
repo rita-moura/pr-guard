@@ -266,8 +266,8 @@ const expect = (condition, message) => { if (!condition) throw Error(message); }
   expect(!document.querySelector('[data-pr-guard-blocked]'), 'clearing rules must release local merge block');
   document.body.dataset.result = 'passed';
 } catch (error) { document.body.dataset.result = 'failed: ' + error.message; } })();`;
-const pages = new Map(await Promise.all(['react', 'legacy', 'off', 'outside', 'empty'].map(async layout => {
-  const fixture = await readFile(new URL(`test/fixtures/pr-${layout === 'legacy' ? 'legacy' : 'react'}.html`, root), 'utf8');
+const pages = new Map(await Promise.all(['react', 'modern-body', 'legacy', 'off', 'outside', 'empty'].map(async layout => {
+  const fixture = await readFile(new URL(`test/fixtures/pr-${layout === 'legacy' ? 'legacy' : layout === 'modern-body' ? 'modern-body' : 'react'}.html`, root), 'utf8');
   return [layout, `<!doctype html><html><head><meta charset="utf-8"></head><body>${fixture}
     <script>${storageMock}</script>
     ${[...scripts.keys()].map(path => `<script src="${path}"></script>`).join('')}
