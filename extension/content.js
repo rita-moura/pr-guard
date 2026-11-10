@@ -66,6 +66,9 @@
       '[class*="PullRequestDescription"]',
       '.js-command-palette-pull-body .markdown-body',
       '.js-command-palette-pull-body',
+      'main [data-hpc]',
+      'main',
+      '[role="main"]',
     ];
     const bodies = [...new Set(selectors.flatMap(selector => [...document.querySelectorAll(selector)]))].filter(visible);
     if (!bodies.length) return undefined;
@@ -80,7 +83,8 @@
     const score = body => {
       const headings = [...body.querySelectorAll(headingSelector)].filter(node => !node.querySelector('h1,h2,h3,h4,h5,h6,[role="heading"],[data-heading-level]'));
       const text = body.textContent.toLocaleLowerCase('pt-BR');
-      return headings.length * 10 + ['issues', 'summary', 'testing', 'deployment'].filter(section => text.includes(section)).length;
+      const sections = ['issues', 'summary', 'testing', 'deployment'].filter(section => new RegExp(`(?:^|[\\s#])${section}(?:$|[\\s:])`, 'i').test(text));
+      return sections.length * 100 + headings.length * 10;
     };
     const body = bodies.sort((left, right) => score(right) - score(left))[0];
     const clone = body.cloneNode(true);
@@ -102,7 +106,7 @@
       node.append('\n');
     });
     clone.querySelectorAll('p,div,ul,ol').forEach(node => node.append('\n'));
-    return clone.textContent;
+    return clone.innerText || clone.textContent;
   }
   function context(clicked) {
     const route = prRoute(location.pathname);
