@@ -70,6 +70,13 @@
     const bodies = [...new Set(selectors.flatMap(selector => [...document.querySelectorAll(selector)]))].filter(visible);
     if (!bodies.length) return undefined;
     const headingSelector = 'h1,h2,h3,h4,h5,h6,[role="heading"],[data-heading-level],[class*="markdown-heading"]';
+    // GitHub's newer renderer can emit template headings as plain divs/spans
+    // without heading semantics. Promote leaf nodes whose complete text is a
+    // known template heading so the engine can split the body into sections.
+    const plainHeadings = new Set([
+      'issues', 'related pull requests', 'summary', 'description', 'testing',
+      'test cases', 'additional notes', 'deployment',
+    ]);
     const score = body => {
       const headings = [...body.querySelectorAll(headingSelector)].filter(node => !node.querySelector('h1,h2,h3,h4,h5,h6,[role="heading"],[data-heading-level]'));
       const text = body.textContent.toLocaleLowerCase('pt-BR');
@@ -78,6 +85,13 @@
     const body = bodies.sort((left, right) => score(right) - score(left))[0];
     const clone = body.cloneNode(true);
     clone.querySelectorAll('pre').forEach(node => node.remove());
+    clone.querySelectorAll('div,span,p').forEach(node => {
+      if (node.children.length > 0) return;
+      const text = node.textContent.trim();
+      if (plainHeadings.has(text.toLocaleLowerCase('pt-BR'))) {
+        node.replaceWith(`\n## ${text}\n`);
+      }
+    });
     clone.querySelectorAll(headingSelector).forEach(node => {
       if (node.querySelector('h1,h2,h3,h4,h5,h6,[role="heading"],[data-heading-level]')) return;
       node.replaceWith(`\n## ${node.textContent}\n`);
