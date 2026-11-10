@@ -61,6 +61,27 @@ function sectionsFromBody(body, requested = []) {
       if (!sections.has(current)) sections.set(current, '');
     } else if (current) sections.set(current, sections.get(current) + '\n' + line);
   }
+  // Some GitHub renderers concatenate the visible heading and paragraph text
+  // when textContent is read. Recover sections from the known heading names
+  // even when those headings are not separated by newlines.
+  const headingNames = [...commonHeadings].sort((left, right) => right.length - left.length);
+  const escaped = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const matches = [];
+  for (const name of headingNames) {
+    const pattern = new RegExp(`(^|[\\n\\r]|[\\s])(${escaped(name)})(?=[\\s]|$)`, 'giu');
+    for (const match of cleanMarkdown(body).matchAll(pattern)) {
+      const start = (match.index ?? 0) + match[1].length;
+      matches.push({ name, start, end: start + name.length });
+    }
+  }
+  matches.sort((left, right) => left.start - right.start || right.name.length - left.name.length);
+  for (let index = 0; index < matches.length; index += 1) {
+    const current = matches[index];
+    const next = matches.slice(index + 1).find(candidate => candidate.start >= current.end);
+    if (!sections.has(current.name)) {
+      sections.set(current.name, cleanMarkdown(body).slice(current.end, next?.start ?? cleanMarkdown(body).length));
+    }
+  }
   return sections;
 }
 
