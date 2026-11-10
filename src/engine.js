@@ -43,13 +43,21 @@ export function changeIdFromBody(body = '') {
   return cleanMarkdown(body).match(/^\s*OpenSpec:\s*([a-z0-9]+(?:-[a-z0-9]+)*)\s*$/mi)?.[1] ?? null;
 }
 
-function sectionsFromBody(body) {
+function sectionsFromBody(body, requested = []) {
   const sections = new Map();
+  const lines = cleanMarkdown(body).split('\n');
+  const aliases = requested.flatMap(name => name.split('|').map(alias => alias.trim().toLocaleLowerCase('pt-BR')));
+  const commonHeadings = new Set([
+    ...aliases,
+    'issues', 'related pull requests', 'summary', 'description', 'testing',
+    'test cases', 'additional notes', 'deployment',
+  ]);
   let current;
-  for (const line of cleanMarkdown(body).split('\n')) {
+  for (const line of lines) {
     const heading = line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
-    if (heading) {
-      current = heading[1].trim().toLocaleLowerCase('pt-BR');
+    const plainHeading = !heading && commonHeadings.has(line.trim().toLocaleLowerCase('pt-BR')) ? line.trim() : null;
+    if (heading || plainHeading) {
+      current = (heading ? heading[1] : plainHeading).trim().toLocaleLowerCase('pt-BR');
       if (!sections.has(current)) sections.set(current, '');
     } else if (current) sections.set(current, sections.get(current) + '\n' + line);
   }
@@ -74,7 +82,7 @@ export function evaluate(policy, context) {
     }
     if (rule.type === 'body-sections') {
       if (context.body == null) return result('unknown', 'Descrição indisponível.');
-      const sections = sectionsFromBody(context.body);
+      const sections = sectionsFromBody(context.body, rule.sections);
       // Lines still containing template example text count as unfilled.
       const filled = text => text.split('\n').filter(line => !(rule.placeholders ?? []).some(p => line.includes(p))).join('\n').trim();
       // "Description|Summary": any of the alternative headings satisfies the section.

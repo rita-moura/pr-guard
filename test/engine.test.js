@@ -113,3 +113,9 @@ test('comparação de branches preserva curingas e caracteres literais', () => {
   assert.equal(globMatches('PLBUX-*', 'plbux-123'), false);
   assert.equal(run({type: 'title-prefix', prefixes: ['PLBUX-'], requireNumber: true, when: {head: ['PLBUX-*']}}, {head: 'plbux-123', title: 'plbux-123 Ajuste'}).status, 'fail');
 });
+
+test('seções renderizadas como linhas simples também são reconhecidas', () => {
+  const rule = { type: 'body-sections', sections: ['Issues', 'Description|Summary', 'Testing', 'Deployment'] };
+  const body = 'Issues\n- PLBUX-9842\nRelated Pull Requests\n- outro PR\nSummary\n- Implementa a exportação\nTesting\nTestes executados\nDeployment\nNenhuma';
+  assert.equal(run(rule, { body }).status, 'pass');
+});
